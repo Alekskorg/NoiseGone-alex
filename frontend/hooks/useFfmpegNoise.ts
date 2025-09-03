@@ -75,9 +75,10 @@ export const useFfmpegNoise = () => {
 
     await ffmpeg.exec(command);
 
-    const data = await ffmpeg.readFile(outputFileName);
-    const blob = new Blob([data], { type: file.type });
-    const url = URL.createObjectURL(blob);
+    const data = (await ffmpeg.readFile(outputFileName)) as Uint8Array;
+const blob = new Blob([data], { type: file.type ?? 'audio/wav' });
+const url = URL.createObjectURL(blob);
+
     
     await ffmpeg.deleteFile(inputFileName);
     await ffmpeg.deleteFile(outputFileName);
