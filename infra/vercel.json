@@ -1,0 +1,9 @@
+{
+  "$schema": "[https://openapi.vercel.sh/vercel.json](https://openapi.vercel.sh/vercel.json)",
+  "rewrites": [
+    {
+      "source": "/api/separate",
+      "destination": "[https://your-fastapi-backend.com/separate](https://your-fastapi-backend.com/separate)"
+    }
+  ]
+}
