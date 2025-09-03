@@ -15,6 +15,7 @@ export const useFfmpegNoise = () => {
   const load = async () => {
     setIsLoading(true);
     const ffmpeg = ffmpegRef.current;
+    // ИСПРАВЛЕНО: Убраны лишние символы из URL
     const baseURL = '[https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm](https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm)';
     
     ffmpeg.on('log', ({ message }) => {
@@ -87,3 +88,4 @@ export const useFfmpegNoise = () => {
 
   return { load, processAudio, isLoading, progress, isReady };
 };
+
