@@ -2,7 +2,6 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useState, useRef } from 'react';
 
-// Определяем типы для режимов обработки
 export type ProcessingMode = 'speech' | 'music' | 'podcast' | 'enhance-voice' | 'normalize';
 
 export const useFfmpegNoise = () => {
@@ -11,38 +10,31 @@ export const useFfmpegNoise = () => {
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
-  // Загрузка ffmpeg.wasm
   const load = async () => {
     setIsLoading(true);
     const ffmpeg = ffmpegRef.current;
-    // ИСПРАВЛЕНО: Убраны лишние символы из URL
-    const baseURL = '[https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm](https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm)';
-    
-    ffmpeg.on('log', ({ message }) => {
-      console.log(message);
-    });
 
-    ffmpeg.on('progress', ({ progress }) => {
-      setProgress(Math.round(progress * 100));
-    });
+    // ✅ правильный URL без markdown-обёртки
+    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+
+    ffmpeg.on('log', ({ message }) => console.log(message));
+    ffmpeg.on('progress', ({ progress }) => setProgress(Math.round(progress * 100)));
 
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
       wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
     });
-    
+
     setIsLoading(false);
     setIsReady(true);
   };
 
   const processAudio = async (file: File, mode: ProcessingMode): Promise<string | null> => {
-    if (!isReady) {
-      console.error("FFmpeg is not loaded yet.");
-      return null;
-    }
-    
+    if (!isReady) return null;
+
     setIsLoading(true);
     setProgress(0);
+
     const ffmpeg = ffmpegRef.current;
     const inputFileName = `input_${file.name}`;
     const outputFileName = `output_${file.name}`;
@@ -50,7 +42,6 @@ export const useFfmpegNoise = () => {
     await ffmpeg.writeFile(inputFileName, await fetchFile(file));
 
     let command: string[] = [];
-    
     switch (mode) {
       case 'speech':
         command = ['-i', inputFileName, '-af', 'afftdn=nf=-25,loudnorm=I=-16:TP=-1.5:LRA=11', outputFileName];
@@ -68,17 +59,21 @@ export const useFfmpegNoise = () => {
         command = ['-i', inputFileName, '-af', 'loudnorm', outputFileName];
         break;
       default:
-        console.error("Unknown processing mode");
         setIsLoading(false);
         return null;
     }
 
     await ffmpeg.exec(command);
-const data = (await ffmpeg.readFile(outputFileName)) as Uint8Array;
-const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-const blob = new Blob([ab], { type: file?.type || 'audio/wav' });
-const url = URL.createObjectURL(blob);
-await ffmpeg.deleteFile(inputFileName);
+
+    // ✅ FileData -> Uint8Array -> ArrayBuffer -> Blob
+    const data = (await ffmpeg.readFile(outputFileName)) as Uint8Array;
+    const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+    const blob = new Blob([ab], { type: file?.type || 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+
+    // Чистим временные файлы
+    await ffmpeg.deleteFile(inputFileName);
+    await ffmpeg.deleteFile(outputFileName).catch(() => {});
 
     setIsLoading(false);
     return url;
@@ -86,4 +81,3 @@ await ffmpeg.deleteFile(inputFileName);
 
   return { load, processAudio, isLoading, progress, isReady };
 };
-
